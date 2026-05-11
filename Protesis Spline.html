@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ProSpline — Diseñador de Prótesis</title>
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@300;500;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d1117;--bg2:#161b22;--bg3:#1c2333;--bg4:#21262d;
+  --acc:#00d4ff;--acc2:#7c3aed;--acc3:#22c55e;--warn:#f59e0b;--danger:#ef4444;
+  --txt:#e2e8f0;--txt2:#8b949e;--bdr:rgba(255,255,255,0.07);
+}
+body{background:var(--bg);color:var(--txt);font-family:'Space Grotesk',sans-serif;min-height:100vh;display:flex;flex-direction:column}
+header{padding:12px 20px;background:var(--bg2);border-bottom:1px solid var(--bdr);display:flex;align-items:center;gap:16px}
+header h1{font-size:1.1rem;font-weight:700;letter-spacing:-.02em;color:var(--acc)}
+header span{color:var(--txt2);font-size:.8rem}
+.tag{background:rgba(0,212,255,.12);color:var(--acc);border:1px solid rgba(0,212,255,.2);font-size:.65rem;padding:2px 8px;border-radius:20px;font-family:'JetBrains Mono',monospace}
+
+.wrap{display:flex;flex:1;overflow:hidden;height:calc(100vh - 50px)}
+
+/* LEFT PANEL */
+.left{width:280px;min-width:240px;background:var(--bg2);border-right:1px solid var(--bdr);display:flex;flex-direction:column;overflow:hidden}
+.section{padding:12px 14px;border-bottom:1px solid var(--bdr)}
+.section-title{font-size:.65rem;font-weight:700;letter-spacing:.1em;color:var(--txt2);text-transform:uppercase;margin-bottom:8px}
+
+/* Animal buttons */
+.animals{display:flex;flex-wrap:wrap;gap:5px}
+.ab{background:var(--bg3);border:1px solid var(--bdr);border-radius:6px;padding:5px 8px;cursor:pointer;font-size:.75rem;display:flex;align-items:center;gap:4px;transition:all .15s;font-family:'Space Grotesk',sans-serif;color:var(--txt2)}
+.ab:hover{border-color:var(--acc);color:var(--acc)}
+.ab.on{background:rgba(0,212,255,.12);border-color:var(--acc);color:var(--acc)}
+
+select{width:100%;background:var(--bg3);border:1px solid var(--bdr);border-radius:6px;padding:6px 8px;color:var(--txt);font-size:.8rem;font-family:'Space Grotesk',sans-serif;cursor:pointer}
+select:focus{outline:none;border-color:var(--acc)}
+
+/* Data table */
+.tb{flex:1;overflow-y:auto}
+.tb::-webkit-scrollbar{width:4px}
+.tb::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:4px}
+table{width:100%;border-collapse:collapse;font-size:.75rem}
+table th{background:var(--bg3);padding:6px 8px;text-align:left;font-size:.6rem;letter-spacing:.08em;color:var(--txt2);text-transform:uppercase;position:sticky;top:0;z-index:1}
+table td{padding:3px 5px;border-bottom:1px solid var(--bdr)}
+td.lb{color:var(--warn);font-family:'JetBrains Mono',monospace;font-size:.65rem;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+table input{width:56px;background:var(--bg3);border:1px solid transparent;border-radius:4px;padding:3px 5px;color:var(--txt);font-size:.75rem;font-family:'JetBrains Mono',monospace;text-align:right}
+table input:focus{outline:none;border-color:var(--acc);background:var(--bg4)}
+
+.btn-row{display:flex;gap:6px;padding:10px 14px;border-bottom:1px solid var(--bdr)}
+.btn{background:var(--bg3);border:1px solid var(--bdr);border-radius:6px;padding:6px 12px;color:var(--txt);font-size:.75rem;cursor:pointer;font-family:'Space Grotesk',sans-serif;transition:all .15s;flex:1;text-align:center}
+.btn:hover{border-color:var(--acc);color:var(--acc)}
+.btn.primary{background:rgba(0,212,255,.12);border-color:var(--acc);color:var(--acc);font-weight:700}
+.btn.danger{border-color:var(--danger);color:var(--danger)}
+.btn.danger:hover{background:rgba(239,68,68,.1)}
+
+/* Source badge */
+.source-badge{padding:8px 14px;font-size:.6rem;color:var(--txt2);font-family:'JetBrains Mono',monospace;line-height:1.6;border-bottom:1px solid var(--bdr)}
+.source-badge a{color:var(--acc2);text-decoration:none}
+
+/* CENTER */
+.center{flex:1;display:flex;flex-direction:column;overflow:hidden}
+#curLbl{padding:8px 16px;font-size:.8rem;color:var(--txt2);border-bottom:1px solid var(--bdr);background:var(--bg2)}
+#curLbl strong{color:var(--txt)}
+#chart{flex:1;min-height:0}
+#nfo{padding:4px 12px;font-size:.65rem;font-family:'JetBrains Mono',monospace;color:var(--txt2);background:var(--bg2);border-top:1px solid var(--bdr)}
+
+/* RIGHT PANEL — code */
+.right{width:340px;min-width:260px;background:var(--bg2);border-left:1px solid var(--bdr);display:flex;flex-direction:column}
+.ct{display:flex;gap:0;border-bottom:1px solid var(--bdr)}
+.ct button{flex:1;background:transparent;border:none;border-bottom:2px solid transparent;padding:10px 0;color:var(--txt2);font-size:.75rem;font-family:'JetBrains Mono',monospace;cursor:pointer;transition:all .15s}
+.ct button.on{color:var(--acc);border-bottom-color:var(--acc)}
+.ct button:hover:not(.on){color:var(--txt)}
+#editor{flex:1;resize:none;background:var(--bg);border:none;color:#c9d1d9;font-family:'JetBrains Mono',monospace;font-size:.7rem;padding:12px;line-height:1.7;outline:none;min-height:0}
+.run-row{padding:10px;border-top:1px solid var(--bdr);display:flex;gap:8px}
+
+/* Toast */
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--bg3);border:1px solid var(--bdr);color:var(--txt);padding:8px 18px;border-radius:8px;font-size:.8rem;opacity:0;transition:all .3s;pointer-events:none;z-index:999}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>⚡ ProSpline</h1>
+  <span>Diseñador de Prótesis — Spline Cúbico Natural</span>
+  <span class="tag">v2.0 · Datos reales veterinarios (Cálculos Corregidos)</span>
+</header>
+
+<div class="wrap">
+
+<div class="left">
+  <div class="section">
+    <div class="section-title">Animal / Especie</div>
+    <div class="animals" id="animalBtns"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Parte anatómica</div>
+    <select id="partSel" onchange="loadPart(this.value)"></select>
+  </div>
+
+  <div class="source-badge" id="srcBadge">Fuente: —</div>
+
+  <div style="padding:6px 14px 4px;font-size:.6rem;color:var(--txt2);text-transform:uppercase;letter-spacing:.08em;display:flex;justify-content:space-between;align-items:center">
+    <span>Puntos de control (cm)</span>
+    <span style="color:var(--acc);font-family:'JetBrains Mono',monospace" id="nPts"></span>
+  </div>
+  <div style="overflow:hidden;flex:0 0 auto;max-height:260px;overflow-y:auto" class="tb">
+    <table>
+      <thead><tr><th>Etiqueta</th><th>x</th><th>y</th></tr></thead>
+      <tbody id="ptB"></tbody>
+    </table>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn" onclick="addPt()">+ Punto</button>
+    <button class="btn danger" onclick="rmPt()">− Punto</button>
+  </div>
+  <div class="btn-row">
+    <button class="btn primary" onclick="gen()">▶ Graficar</button>
+  </div>
+</div>
+
+<div class="center">
+  <div id="curLbl"><strong>—</strong></div>
+  <div id="chart"></div>
+  <div id="nfo">—</div>
+</div>
+
+<div class="right">
+  <div class="ct">
+    <button class="on" data-ct="py" onclick="setCodeTab('py')">Python</button>
+    <button data-ct="oct" onclick="setCodeTab('oct')">Octave</button>
+  </div>
+  <textarea id="editor" spellcheck="false"></textarea>
+  <div class="run-row">
+    <button class="btn primary" onclick="runCode()" style="flex:2">▶ Ejecutar código</button>
+    <button class="btn" onclick="copyCode()" style="flex:1">Copiar</button>
+  </div>
+</div>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ─────────────────────────────────────────────────────────────────
+// DATOS con medidas veterinarias reales (cm)
+// ─────────────────────────────────────────────────────────────────
+const DATA = {
+  perro: {
+    n:'Perro (mediano ~20kg)', e:'🐕',
+    src:'VetKey Canine Anatomy; PMC12767463 (3D Canine Prosthetics)',
+    parts: {
+      'Miembro anterior — Perfil lateral': {
+        x: [0, 0.5, 1.2, 2.0, 2.8, 3.4, 3.7],
+        y: [23, 18, 12.5, 6.8, 2.4, 0.5, 0],
+        labels: ['Escápula/Muñón','Hombro','Codo (húmero~15cm)','Antebrazo/Radio','Carpo (~18cm)','Metacarpo','Dígito']
+      },
+      'Miembro posterior — Perfil lateral': {
+        x: [0, 0.6, 1.4, 2.3, 3.1, 3.8, 4.1],
+        y: [26, 20, 13, 7, 3, 0.6, 0],
+        labels: ['Cadera/Muñón','Rodilla (fémur~17cm)','Cresta tibial','Tibia (~18cm)','Tarso','Metatarso','Dígito']
+      },
+      'Dígito (dedo)': {
+        x: [0, 0.2, 0.5, 0.8, 1.1, 1.3],
+        y: [1.8, 1.2, 0.7, 0.35, 0.1, 0],
+        labels: ['F.Proximal','Articulación','F.Media','F.Distal','Garra base','Garra punta']
+      },
+      'Almohadilla plantar': {
+        x: [0, 0.6, 1.4, 2.0, 2.4, 2.6],
+        y: [0.8, 1.2, 1.0, 0.6, 0.2, 0],
+        labels: ['Borde caudal','Zona central','Ápex','Borde craneal','Reborde digital','Contacto']
+      }
+    }
+  },
+  gato: {
+    n:'Gato (adulto ~4kg)', e:'🐈',
+    src:'PMC3959271 (Cat prosthesis model); AnatomyLearner cat skeleton',
+    parts: {
+      'Miembro anterior — Perfil lateral': {
+        x: [0, 0.4, 0.9, 1.5, 2.1, 2.6, 2.9],
+        y: [13, 10, 6.5, 3.5, 1.5, 0.4, 0],
+        labels: ['Escápula/Muñón','Hombro','Codo (húmero~7.5cm)','Radio (~6cm)','Carpo','Metacarpo','Dígito']
+      },
+      'Miembro posterior — Perfil lateral': {
+        x: [0, 0.5, 1.1, 1.9, 2.7, 3.2, 3.5],
+        y: [15, 11.5, 7.5, 4, 1.8, 0.5, 0],
+        labels: ['Cadera/Muñón','Rodilla (fémur~9cm)','Cresta tibial','Tibia (~8cm)','Tarso','Metatarso','Dígito']
+      },
+      'Garra retráctil': {
+        x: [0, 0.15, 0.35, 0.6, 0.85, 1.0],
+        y: [0.9, 0.65, 0.4, 0.2, 0.06, 0],
+        labels: ['F.Proximal','Articulación','F.Media','F.Distal','Base garra','Punta garra']
+      },
+      'Cola (soporte postural)': {
+        x: [0, 1.2, 2.8, 4.5, 6.5, 8.2, 9.4],
+        y: [1.2, 1.8, 2.1, 1.6, 0.9, 0.4, 0.1],
+        labels: ['Vértebra sacra','Caudal 1','Caudal 3','Caudal 5','Caudal 7','Caudal 10','Punta (~25cm total)'],
+        isTail: true
+      }
+    }
+  },
+  ave: {
+    n:'Loro/Ave (Psittacus ~400g)', e:'🦜',
+    src:'Sci.Reports 2024 (3D-printed bird prosthetics); avian morphometry',
+    parts: {
+      'Ala — Estructura ósea (Columba/Loro)': {
+        x: [0, 3.5, 6.8, 8.2, 11.5, 15.2, 19.0, 21.0],
+        y: [0, 2.8, 4.5, 2.5, 4.0, 3.5, 2.0, 0.3],
+        labels: ['Hombro','Húmero (~7cm)','Codo','Radio/Ulna','Muñeca','Metacarpo (~4cm)','Falange','Punta ala'],
+        isWing: true
+      },
+      'Pata — Tarsometatarso': {
+        x: [0, 0.2, 0.5, 0.9, 1.4, 1.8, 2.1],
+        y: [3.8, 2.9, 1.9, 1.1, 0.5, 0.15, 0],
+        labels: ['Muñón','Encaje prox','Tibiotarso','Tarso','Metatarso (~3.5cm)','Metatarso dist','Dígito apoyo']
+      },
+      'Dígito plantar (dedo)': {
+        x: [0, 0.15, 0.35, 0.55, 0.75, 0.9],
+        y: [0.7, 0.5, 0.3, 0.15, 0.05, 0],
+        labels: ['F.Proximal','Art. PIP','F.Media','Art. DIP','F.Distal','Garra']
+      }
+    }
+  },
+  conejo: {
+    n:'Conejo (~2.5kg)', e:'🐰',
+    src:'Veterinary orthopedic refs; rabbit musculoskeletal anatomy',
+    parts: {
+      'Miembro posterior — Perfil lateral': {
+        x: [0, 0.5, 1.2, 2.1, 3.0, 3.7, 4.0],
+        y: [17, 13, 8.5, 4.5, 1.8, 0.4, 0],
+        labels: ['Cadera/Muñón','Rodilla (fémur~8cm)','Cresta tibial','Tibia (~7cm)','Tarso','Metatarso','Dígito']
+      },
+      'Miembro anterior — Perfil lateral': {
+        x: [0, 0.3, 0.8, 1.4, 2.0, 2.4, 2.7],
+        y: [13, 10, 6.5, 3.5, 1.5, 0.4, 0],
+        labels: ['Escápula/Muñón','Hombro','Codo (húmero~6.5cm)','Radio (~5.5cm)','Carpo','Metacarpo','Dígito']
+      }
+    }
+  },
+  humano: {
+    n:'Humano adulto', e:'🧑',
+    src:'Standard prosthetics measurements; anatomical refs (Gray\'s Anatomy)',
+    parts: {
+      'Miembro inferior — Perfil lateral': {
+        x: [0, 1.2, 3.0, 5.5, 8.2, 10.5, 11.5],
+        y: [90, 72, 52, 33, 14, 3, 0],
+        labels: ['Cadera/Muñón','Rodilla (fémur~44cm)','Cresta tibial','Tibia (~36cm)','Tobillo','Metatarso','Dígito']
+      },
+      'Miembro superior — Perfil lateral': {
+        x: [0, 0.8, 2.0, 3.8, 5.8, 7.2, 8.0],
+        y: [72, 57, 40, 23, 9, 2, 0],
+        labels: ['Hombro/Muñón','Codo (húmero~32cm)','Antebrazo prox','Radio/Ulna (~25cm)','Muñeca','Metacarpo','Dígito']
+      },
+      'Mano — Perfil lateral': {
+        x: [0, 0.5, 1.2, 2.0, 3.0, 3.8, 4.3],
+        y: [9, 7, 5, 3.2, 1.5, 0.4, 0],
+        labels: ['Muñeca','Metacarpo I','Metacarpo III','Falange proximal','Falange media','Falange distal','Uña']
+      },
+      'Pie — Perfil lateral': {
+        x: [0, 1.5, 4.0, 7.5, 12, 16, 19, 20],
+        y: [7, 8, 7.5, 5, 3, 1.5, 0.5, 0],
+        labels: ['Talón','Arco plantar','Metatarso prox','Metatarso dist','Metatarso V','F.Proximal','F.Distal','Dígito'],
+        isFoot: true
+      }
+    }
+  },
+  delfin: {
+    n:'Delfín/Cetáceo', e:'🐬',
+    src:'Marine mammal prosthetics (Winter the dolphin case study)',
+    parts: {
+      'Aleta caudal — Eje dorsal': {
+        x: [0, 4, 9, 15, 22, 30, 38, 42],
+        y: [0, 3.5, 8.2, 11.5, 10.8, 7.5, 3.5, 0.5],
+        labels: ['Base aleta','Lóbulo prox','Ancho máx','Centro','Estrechamiento','Punta prox','Punta dist','Apex'],
+        isWing: true
+      },
+      'Aleta pectoral': {
+        x: [0, 2.5, 5.5, 9, 12.5, 15, 16.5],
+        y: [0, 3.5, 6.8, 8.5, 7.5, 4.5, 1.2],
+        labels: ['Base hombro','Ancho prox','Codo homólogo','Muñeca','Ancho máx','Borde caudal','Punta'],
+        isWing: true
+      }
+    }
+  },
+  tortuga: {
+    n:'Tortuga (aleta)', e:'🐢',
+    src:'Sea turtle flipper prosthetics literature',
+    parts: {
+      'Aleta delantera — Perfil': {
+        x: [0, 2, 5, 10, 17, 24, 29, 31],
+        y: [0, 3, 7.5, 12, 14, 11, 6, 1.5],
+        labels: ['Hombro/Muñón','Húmero prox','Codo','Radio/Ulna','Ancho máx','Carpo dist','Aleta dist','Punta'],
+        isWing: true
+      }
+    }
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────
+// SPLINE CÚBICO NATURAL
+// ─────────────────────────────────────────────────────────────────
+function cubicSplineNatural(xs, ys) {
+  const n = xs.length - 1;
+  if (n < 1) return () => ys[0];
+
+  const h = [], alpha = [], l = [1], mu = [0], z = [0];
+  for (let i = 0; i < n; i++) h[i] = xs[i + 1] - xs[i];
+  for (let i = 1; i < n; i++)
+    alpha[i] = (3 / h[i]) * (ys[i + 1] - ys[i]) - (3 / h[i - 1]) * (ys[i] - ys[i - 1]);
+
+  for (let i = 1; i < n; i++) {
+    l[i] = 2 * (xs[i + 1] - xs[i - 1]) - h[i - 1] * mu[i - 1];
+    mu[i] = h[i] / l[i];
+    z[i] = (alpha[i] - h[i - 1] * z[i - 1]) / l[i];
+  }
+  l[n] = 1; z[n] = 0;
+
+  const c = Array(n + 1).fill(0), b = [], d = [];
+  for (let j = n - 1; j >= 0; j--) {
+    c[j] = z[j] - mu[j] * c[j + 1];
+    b[j] = (ys[j + 1] - ys[j]) / h[j] - h[j] * (c[j + 1] + 2 * c[j]) / 3;
+    d[j] = (c[j + 1] - c[j]) / (3 * h[j]);
+  }
+
+  return (x) => {
+    let i = n - 1;
+    for (let j = 0; j < n; j++) { if (x <= xs[j + 1]) { i = j; break; } }
+    const dx = x - xs[i];
+    return ys[i] + b[i] * dx + c[i] * dx * dx + d[i] * dx * dx * dx;
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────
+// MODIFICACIÓN MATEMÁTICA 1: INTERPOLACIÓN POR LONGITUD DE ARCO
+// ─────────────────────────────────────────────────────────────────
+function interpParametric(xCtrl, yCtrl, nPts = 300) {
+  const N = xCtrl.length;
+  const t = [0]; // Se calcula la distancia real (Longitud de Arco)
+  for (let i = 1; i < N; i++) {
+    t.push(t[i - 1] + Math.hypot(xCtrl[i] - xCtrl[i - 1], yCtrl[i] - yCtrl[i - 1]));
+  }
+  const totalL = t[N - 1];
+  const tt = [];
+  for (let i = 0; i < nPts; i++) tt.push((i / (nPts - 1)) * totalL);
+
+  const sx = cubicSplineNatural(t, xCtrl);
+  const sy = cubicSplineNatural(t, yCtrl);
+  return { x: tt.map(v => sx(v)), y: tt.map(v => sy(v)), totalLen: totalL };
+}
+
+// ─────────────────────────────────────────────────────────────────
+// ESTADO GLOBAL
+// ─────────────────────────────────────────────────────────────────
+let curAnimal = 'gato', curPart = null, cLang = 'py';
+window._py = ''; window._oct = '';
+
+// ─────────────────────────────────────────────────────────────────
+// UI helpers (Sin modificaciones)
+// ─────────────────────────────────────────────────────────────────
+function readCtrl() {
+  const rows = document.querySelectorAll('#ptB tr');
+  const x = [], y = [];
+  rows.forEach(r => {
+    const inp = r.querySelectorAll('input');
+    if (inp.length >= 2) { x.push(+inp[0].value || 0); y.push(+inp[1].value || 0); }
+  });
+  return { x, y };
+}
+
+function fillCtrl(d) {
+  const tb = document.getElementById('ptB');
+  tb.innerHTML = '';
+  d.x.forEach((xv, i) => {
+    const tr = document.createElement('tr');
+    const lbl = d.labels ? d.labels[i] : 'P' + i;
+    tr.innerHTML = `<td class="lb" title="${lbl}">${lbl}</td>
+      <td><input type="number" step="0.01" value="${xv.toFixed(2)}"></td>
+      <td><input type="number" step="0.01" value="${d.y[i].toFixed(2)}"></td>`;
+    tb.appendChild(tr);
+  });
+  document.getElementById('nPts').textContent = d.x.length + ' pts';
+}
+
+function initAnimalButtons() {
+  const cont = document.getElementById('animalBtns');
+  cont.innerHTML = '';
+  Object.entries(DATA).forEach(([k, v]) => {
+    const b = document.createElement('button');
+    b.className = 'ab'; b.dataset.a = k;
+    b.innerHTML = `${v.e} <span>${v.n.split('(')[0].trim()}</span>`;
+    b.onclick = () => loadAnimal(k);
+    cont.appendChild(b);
+  });
+}
+
+function loadAnimal(k) {
+  curAnimal = k;
+  document.querySelectorAll('.ab').forEach(b => b.classList.remove('on'));
+  document.querySelector(`[data-a="${k}"]`)?.classList.add('on');
+
+  const parts = Object.keys(DATA[k].parts);
+  const sel = document.getElementById('partSel');
+  sel.innerHTML = parts.map((p, i) => `<option value="${p}"${i ? '' : ' selected'}>${p}</option>`).join('');
+
+  document.getElementById('srcBadge').textContent = 'Fuente: ' + (DATA[k].src || '—');
+  loadPart(parts[0]);
+}
+
+function loadPart(p) {
+  curPart = p;
+  const d = DATA[curAnimal]?.parts[p];
+  if (!d) return;
+  fillCtrl(d);
+  const an = DATA[curAnimal];
+  document.getElementById('curLbl').innerHTML =
+    `<strong>${an.e} ${an.n}</strong> — ${p}`;
+  updateCode();
+  gen();
+}
+
+// ─────────────────────────────────────────────────────────────────
+// MODIFICACIÓN MATEMÁTICA 2: GENERACIÓN DE GRÁFICA CON NORMALES
+// ─────────────────────────────────────────────────────────────────
+function gen() {
+  const c = readCtrl();
+  if (c.x.length < 3) { toast('⚠ Mínimo 3 puntos de control'); return; }
+
+  const cv = interpParametric(c.x, c.y, 300);
+  const part = DATA[curAnimal]?.parts[curPart];
+  const isWing = part?.isWing || false;
+  const isTail = part?.isTail || false;
+  const isFoot = part?.isFoot || false;
+  const labels = part?.labels || c.x.map((_, i) => 'P' + i);
+
+  // CÁLCULO DE VECTORES NORMALES (Perpendiculares a la curva)
+  const N = cv.x.length;
+  const nx = [], ny = [];
+  for (let i = 0; i < N; i++) {
+    let prev = Math.max(0, i - 1), next = Math.min(N - 1, i + 1);
+    let dx = cv.x[next] - cv.x[prev];
+    let dy = cv.y[next] - cv.y[prev];
+    let len = Math.hypot(dx, dy);
+    if (len === 0) { dx = 0; dy = 1; len = 1; }
+    nx.push(-dy / len);
+    ny.push(dx / len);
+  }
+
+  let traces = [];
+
+  if (isWing) {
+    // Ala / aleta: offset perpendicular para que no se "aplaste" en las caídas
+    const thick = Math.max(0.3, cv.totalLen * 0.05);
+    const xUp = cv.x.map((x, i) => x + nx[i] * thick);
+    const yUp = cv.y.map((y, i) => y + ny[i] * thick);
+    const xDn = cv.x.map((x, i) => x - nx[i] * thick);
+    const yDn = cv.y.map((y, i) => y - ny[i] * thick);
+
+    traces = [
+      {
+        x: xUp.concat([...xDn].reverse()),
+        y: yUp.concat([...yDn].reverse()),
+        fill: 'toself', fillcolor: 'rgba(0,212,255,0.07)',
+        line: { color: 'rgba(0,212,255,0.15)', width: 1 }, name: 'Sección ósea'
+      },
+      { x: cv.x, y: cv.y, mode: 'lines', name: 'Eje óseo (spline)', line: { color: '#00d4ff', width: 3 } },
+      { x: xUp, y: yUp, mode: 'lines', name: 'Borde sup', line: { color: '#22c55e', width: 1.2, dash: 'dash' } },
+      { x: xDn, y: yDn, mode: 'lines', name: 'Borde inf', line: { color: '#f59e0b', width: 1.2, dash: 'dash' } },
+      {
+        x: c.x, y: c.y, mode: 'markers+text', name: 'Articulaciones',
+        marker: { color: '#ef4444', size: 11, symbol: 'diamond', line: { color: '#fff', width: 1.5 } },
+        text: labels, textposition: 'top center',
+        textfont: { size: 9, color: '#f59e0b', family: 'JetBrains Mono' }
+      }
+    ];
+  } else if (isTail) {
+    // Cola: curva libre sin espejo
+    traces = [
+      { x: cv.x, y: cv.y, mode: 'lines', name: 'Eje cola (spline)', line: { color: '#a78bfa', width: 3 } },
+      {
+        x: c.x, y: c.y, mode: 'markers+text', name: 'Vértebras',
+        marker: { color: '#f59e0b', size: 9, symbol: 'circle', line: { color: '#fff', width: 1 } },
+        text: labels, textposition: 'top right',
+        textfont: { size: 8, color: '#c084fc', family: 'JetBrains Mono' }
+      }
+    ];
+  } else if (isFoot) {
+    // Pie: perfil inferior (contacto suelo)
+    const yFloor = Math.min(...cv.y);
+    traces = [
+      {
+        x: cv.x.concat([cv.x[cv.x.length - 1], cv.x[0]]),
+        y: cv.y.concat([yFloor, yFloor]),
+        fill: 'toself', fillcolor: 'rgba(34,197,94,0.07)',
+        line: { color: 'rgba(34,197,94,0.2)', width: 1 }, name: 'Perfil pie'
+      },
+      { x: cv.x, y: cv.y, mode: 'lines', name: 'Arco plantar (spline)', line: { color: '#22c55e', width: 3 } },
+      {
+        x: c.x, y: c.y, mode: 'markers+text', name: 'Control',
+        marker: { color: '#ef4444', size: 10, symbol: 'diamond', line: { color: '#fff', width: 1.5 } },
+        text: labels, textposition: 'top center',
+        textfont: { size: 9, color: '#f59e0b', family: 'JetBrains Mono' }
+      }
+    ];
+  } else {
+    // MIEMBRO: Reemplazado "-x" (espejo roto) por Offset Normal (perfil anatómico)
+    const Lx = [], Ly = [], Rx = [], Ry = [];
+    const baseThick = cv.totalLen * 0.12; 
+    for (let i = 0; i < N; i++) {
+        let t_norm = i / (N - 1);
+        let profile = (1 - t_norm) * 1.0 + t_norm * 0.3 + Math.sin(t_norm * Math.PI) * 0.25;
+        let r = baseThick * profile;
+        Lx.push(cv.x[i] + nx[i] * r); Ly.push(cv.y[i] + ny[i] * r);
+        Rx.push(cv.x[i] - nx[i] * r); Ry.push(cv.y[i] - ny[i] * r);
+    }
+    
+    traces = [
+      {
+        x: Lx.concat([...Rx].reverse()),
+        y: Ly.concat([...Ry].reverse()),
+        fill: 'toself', fillcolor: 'rgba(0,212,255,0.06)',
+        line: { color: 'rgba(0,212,255,0.15)', width: 1 }, name: 'Silueta prótesis'
+      },
+      { x: cv.x, y: cv.y, mode: 'lines', name: 'Perfil (spline)', line: { color: '#00d4ff', width: 3 } },
+      { x: Lx, y: Ly, mode: 'lines', name: 'Contorno', line: { color: '#8b5cf6', width: 2, dash: 'dot' } },
+      { x: Rx, y: Ry, mode: 'lines', showlegend: false, line: { color: '#8b5cf6', width: 2, dash: 'dot' } },
+      {
+        x: c.x, y: c.y, mode: 'markers+text', name: 'Articulaciones',
+        marker: { color: '#ef4444', size: 10, symbol: 'diamond', line: { color: '#fff', width: 1.5 } },
+        text: labels, textposition: 'top right',
+        textfont: { size: 9, color: '#f59e0b', family: 'JetBrains Mono' }
+      }
+    ];
+  }
+
+  const an = DATA[curAnimal];
+  Plotly.react('chart', traces, {
+    paper_bgcolor: '#0d1117', plot_bgcolor: '#0a0f1e',
+    font: { family: 'Space Grotesk', color: '#e2e8f0' },
+    title: {
+      text: `${an.e} ${an.n.split('(')[0].trim()} — ${curPart} — Spline Cúbico Natural`,
+      font: { size: 13, color: '#e2e8f0' }
+    },
+    xaxis: { title: 'x [cm]', gridcolor: 'rgba(255,255,255,0.04)', zerolinecolor: 'rgba(0,212,255,0.15)', color: '#8b949e' },
+    yaxis: { title: 'y [cm]', gridcolor: 'rgba(255,255,255,0.04)', scaleanchor: 'x', color: '#8b949e' },
+    margin: { t: 48, r: 16, b: 50, l: 50 },
+    legend: {
+      x: .01, y: .99, bgcolor: 'rgba(13,17,23,.92)',
+      bordercolor: 'rgba(255,255,255,.06)', borderwidth: 1, font: { size: 10 }
+    }
+  }, { responsive: true });
+
+  document.getElementById('nfo').textContent =
+    `${c.x.length} pts control | 300 pts interpolados | Longitud de arco | Offset Normal perpendicular`;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// MODIFICACIÓN MATEMÁTICA 3: GENERACIÓN DE CÓDIGO ACTUALIZADO
+// ─────────────────────────────────────────────────────────────────
+function updateCode() {
+  const d = DATA[curAnimal]?.parts[curPart];
+  if (!d) return;
+
+  const xS = d.x.map(v => v.toFixed(3)).join(', ');
+  const yS = d.y.map(v => v.toFixed(3)).join(', ');
+  const lblS = (d.labels || d.x.map((_, i) => 'P' + i)).map(l => `'${l}'`).join(', ');
+  const an = DATA[curAnimal];
+  const isWing = d.isWing || false;
+  const isTail = d.isTail || false;
+  const title = `${an.n} — ${curPart}`;
+
+  // ── PYTHON ──────────────
+  window._py = `# ${title}
+# Spline Cúbico Natural con Longitud de Arco y Vectores Normales
+# Fuente datos: ${an.src || 'medidas veterinarias'}
+# Requiere: numpy, scipy, matplotlib
+
+import numpy as np
+from scipy.interpolate import CubicSpline
+import matplotlib.pyplot as plt
+
+# Puntos de control (cm) — medidas anatómicas reales
+x_ctrl = np.array([${xS}])
+y_ctrl = np.array([${yS}])
+labels = [${lblS}]
+
+# 1. Parametrización por longitud de arco
+dists = np.hypot(np.diff(x_ctrl), np.diff(y_ctrl))
+t = np.insert(np.cumsum(dists), 0, 0)
+tt = np.linspace(0, t[-1], 300)
+total_len = t[-1]
+
+# Spline cúbico natural
+cs_x = CubicSpline(t, x_ctrl, bc_type='natural')
+cs_y = CubicSpline(t, y_ctrl, bc_type='natural')
+xs, ys = cs_x(tt), cs_y(tt)
+
+# 2. Vectores Normales
+dx, dy = np.gradient(xs), np.gradient(ys)
+length = np.hypot(dx, dy)
+length[length == 0] = 1 # Evitar div por cero
+nx, ny = -dy / length, dx / length
+
+fig, ax = plt.subplots(figsize=(10, 8))
+fig.patch.set_facecolor('#0d1117')
+ax.set_facecolor('#0a0f1e')
+ax.tick_params(colors='#8b949e'); ax.xaxis.label.set_color('#8b949e'); ax.yaxis.label.set_color('#8b949e')
+for spine in ax.spines.values(): spine.set_edgecolor('#30363d')
+
+${isWing ? `# Ala: eje óseo + bordes perpendiculares
+thick = max(0.3, total_len * 0.05)
+xUp, yUp = xs + nx * thick, ys + ny * thick
+xDn, yDn = xs - nx * thick, ys - ny * thick
+
+ax.fill(np.concatenate([xUp, xDn[::-1]]), np.concatenate([yUp, yDn[::-1]]), alpha=0.07, color='cyan', label='Sección ósea')
+ax.plot(xs, ys, color='#00d4ff', lw=2.5, label='Eje óseo (spline)')
+ax.plot(xUp, yUp, color='#22c55e', lw=1, ls='--', label='Borde superior')
+ax.plot(xDn, yDn, color='#f59e0b', lw=1, ls='--', label='Borde inferior')` :
+isTail ? `# Cola: curva libre
+ax.plot(xs, ys, color='#a78bfa', lw=2.5, label='Eje cola (spline)')` :
+`# Perfil + Contorno Anatómico
+base_thick = total_len * 0.12
+t_norm = np.linspace(0, 1, len(xs))
+profile = (1 - t_norm) * 1.0 + t_norm * 0.3 + np.sin(t_norm * np.pi) * 0.25
+r = base_thick * profile
+
+Lx, Ly = xs + nx * r, ys + ny * r
+Rx, Ry = xs - nx * r, ys - ny * r
+
+ax.fill(np.concatenate([Lx, Rx[::-1]]), np.concatenate([Ly, Ry[::-1]]), alpha=0.06, color='cyan', label='Silueta prótesis')
+ax.plot(xs, ys, color='#00d4ff', lw=2.5, label='Perfil (spline)')
+ax.plot(Lx, Ly, color='#8b5cf6', lw=2, ls=':', label='Contorno')
+ax.plot(Rx, Ry, color='#8b5cf6', lw=2, ls=':')`}
+
+# Puntos de control con etiquetas
+ax.scatter(x_ctrl, y_ctrl, c='#ef4444', s=90, zorder=5, marker='D', label='Articulaciones')
+for i, (xi, yi, lbl) in enumerate(zip(x_ctrl, y_ctrl, labels)):
+    ax.annotate(lbl, (xi, yi), xytext=(6, 6), textcoords='offset points',
+                fontsize=7.5, color='#f59e0b', fontfamily='monospace')
+
+ax.set_title('${title}', color='#e2e8f0', pad=12)
+ax.set_xlabel('x [cm]'); ax.set_ylabel('y [cm]')
+ax.set_aspect('equal'); ax.grid(True, alpha=0.08, color='#30363d')
+ax.legend(facecolor='#161b22', edgecolor='#30363d', labelcolor='#e2e8f0', fontsize=9)
+plt.tight_layout()
+plt.show()
+`;
+
+  // ── OCTAVE / MATLAB ─────────────────────────────────────────────
+  window._oct = `% ${title}
+% Spline Cúbico Natural con Longitud de Arco y Vectores Normales
+% Fuente datos: ${an.src || 'medidas veterinarias'}
+
+x_ctrl = [${xS}];
+y_ctrl = [${yS}];
+labels = {${lblS}};
+
+% 1. Parametrizacion por longitud de arco
+t = [0, cumsum(hypot(diff(x_ctrl), diff(y_ctrl)))];
+tt = linspace(0, t(end), 300);
+total_len = t(end);
+
+xs = spline_natural_eval(t, x_ctrl, tt);
+ys = spline_natural_eval(t, y_ctrl, tt);
+
+% 2. Vectores Normales
+dx = gradient(xs); dy = gradient(ys);
+len = hypot(dx, dy);
+len(len == 0) = 1; % Evitar div por cero
+nx = -dy ./ len; ny = dx ./ len;
+
+figure('Color', [0.05 0.067 0.09]);
+ax = axes('Color', [0.04 0.059 0.075]);
+hold on;
+
+${isWing ? `% Ala: eje óseo + bordes perpendiculares
+thick = max(0.3, total_len * 0.05);
+xUp = xs + nx .* thick; yUp = ys + ny .* thick;
+xDn = xs - nx .* thick; yDn = ys - ny .* thick;
+
+fill([xUp fliplr(xDn)], [yUp fliplr(yDn)], 'c', 'FaceAlpha', 0.07, 'EdgeColor', 'none');
+plot(xs, ys, 'Color', [0 .83 1], 'LineWidth', 2.5, 'DisplayName', 'Eje oseo (spline)');
+plot(xUp, yUp, 'Color', [.13 .77 .37], 'LineStyle', '--', 'LineWidth', 1, 'DisplayName', 'Borde sup');
+plot(xDn, yDn, 'Color', [.96 .62 .04], 'LineStyle', '--', 'LineWidth', 1, 'DisplayName', 'Borde inf');` :
+isTail ? `% Cola: curva libre
+plot(xs, ys, 'Color', [.66 .54 .99], 'LineWidth', 2.5, 'DisplayName', 'Eje cola (spline)');` :
+`% Perfil + Contorno Anatómico
+base_thick = total_len * 0.12;
+t_norm = linspace(0, 1, length(xs));
+profile = (1 - t_norm) * 1.0 + t_norm * 0.3 + sin(t_norm * pi) * 0.25;
+r = base_thick .* profile;
+
+Lx = xs + nx .* r; Ly = ys + ny .* r;
+Rx = xs - nx .* r; Ry = ys - ny .* r;
+
+fill([Lx fliplr(Rx)], [Ly fliplr(Ry)], 'c', 'FaceAlpha', 0.06, 'EdgeColor', 'none');
+plot(xs, ys, 'Color', [0 .83 1], 'LineWidth', 2.5, 'DisplayName', 'Perfil (spline)');
+plot(Lx, Ly, 'Color', [.55 .36 .97], 'LineStyle', ':', 'LineWidth', 2, 'DisplayName', 'Contorno');
+plot(Rx, Ry, 'Color', [.55 .36 .97], 'LineStyle', ':', 'LineWidth', 2, 'HandleVisibility','off');`}
+
+% Puntos de control
+scatter(x_ctrl, y_ctrl, 90, [.94 .27 .27], 'filled', 'd', 'DisplayName', 'Articulaciones');
+for i = 1:length(x_ctrl)
+    text(x_ctrl(i)+0.2, y_ctrl(i)+0.2, labels{i}, ...
+         'Color', [.96 .62 .04], 'FontSize', 7, 'FontName', 'Courier');
+end
+
+title('${title}', 'Color', 'white');
+xlabel('x [cm]', 'Color', [.55 .58 .62]);
+ylabel('y [cm]', 'Color', [.55 .58 .62]);
+axis equal; grid on;
+legend('show', 'TextColor', 'white', 'Color', [0.09 0.1 0.13]);
+
+% ─ Función auxiliar (spline natural) ─────────────────────────────
+function yy = spline_natural_eval(x, y, xx)
+  n = length(x) - 1;
+  h = diff(x);
+  A = zeros(n+1, n+1); rhs = zeros(n+1, 1);
+  A(1,1) = 1;  A(end,end) = 1;
+  for i = 2:n
+    A(i,i-1) = h(i-1); A(i,i) = 2*(h(i-1)+h(i)); A(i,i+1) = h(i);
+    rhs(i) = 3*((y(i+1)-y(i))/h(i) - (y(i)-y(i-1))/h(i-1));
+  end
+  c = A \\ rhs; b = zeros(n,1); d = zeros(n,1);
+  for i = 1:n
+    b(i) = (y(i+1)-y(i))/h(i) - h(i)*(2*c(i)+c(i+1))/3;
+    d(i) = (c(i+1)-c(i))/(3*h(i));
+  end
+  yy = zeros(size(xx));
+  for k = 1:length(xx)
+    seg = n;
+    for j = 1:n-1
+      if xx(k) <= x(j+1); seg = j; break; end
+    end
+    dx = xx(k) - x(seg);
+    yy(k) = y(seg) + b(seg)*dx + c(seg)*dx^2 + d(seg)*dx^3;
+  end
+end
+`;
+
+  document.getElementById('editor').value = cLang === 'py' ? window._py : window._oct;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// EJECUTAR CÓDIGO Y EVENTOS DE INTERFAZ (Sin modificaciones)
+// ─────────────────────────────────────────────────────────────────
+function runCode() {
+  const code = document.getElementById('editor').value;
+  const arrayRe = /(\w+)\s*=\s*(?:np\.array\s*\(\s*)?\[([^\]]+)\]/g;
+  const all = [...code.matchAll(arrayRe)];
+  const arrs = all
+    .map(m => ({ name: m[1], vals: m[2].split(/[\s,;]+/).filter(s => s && s !== '...').map(Number).filter(v => !isNaN(v)) }))
+    .filter(a => a.vals.length >= 3);
+
+  if (arrs.length < 2) { toast('⚠ Necesito al menos 2 arrays numéricos con ≥3 valores (x_ctrl, y_ctrl)'); return; }
+  const xArr = arrs.find(a => a.name.includes('x')) || arrs[0];
+  const yArr = arrs.find(a => a.name.includes('y') && a !== xArr) || arrs[1];
+  if (xArr.vals.length !== yArr.vals.length) { toast(`⚠ Arrays de distinto largo: ${xArr.name}(${xArr.vals.length}) vs ${yArr.name}(${yArr.vals.length})`); return; }
+
+  fillCtrl({ x: xArr.vals, y: yArr.vals });
+  gen();
+  toast(`✓ ${xArr.name}[${xArr.vals.length}] + ${yArr.name}[${yArr.vals.length}] → graficado`);
+}
+
+function copyCode() {
+  const txt = document.getElementById('editor').value;
+  navigator.clipboard.writeText(txt).then(() => toast('✓ Código copiado al portapapeles'));
+}
+
+function setCodeTab(t) {
+  cLang = t;
+  document.querySelectorAll('.ct button').forEach(b => b.classList.remove('on'));
+  document.querySelector(`[data-ct="${t}"]`).classList.add('on');
+  document.getElementById('editor').value = t === 'py' ? window._py : window._oct;
+}
+
+function addPt() {
+  const tb = document.getElementById('ptB');
+  const n = tb.rows.length;
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td class="lb">P${n}</td>
+    <td><input type="number" step="0.01" value="0.00"></td>
+    <td><input type="number" step="0.01" value="0.00"></td>`;
+  tb.appendChild(tr);
+  document.getElementById('nPts').textContent = (n + 1) + ' pts';
+}
+
+function rmPt() {
+  const tb = document.getElementById('ptB');
+  if (tb.rows.length > 3) {
+    tb.deleteRow(tb.rows.length - 1);
+    document.getElementById('nPts').textContent = tb.rows.length + ' pts';
+  } else toast('⚠ Mínimo 3 puntos');
+}
+
+function toast(m) {
+  const t = document.getElementById('toast');
+  t.textContent = m;
+  t.classList.add('show');
+  clearTimeout(t._tm);
+  t._tm = setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+// ─────────────────────────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  initAnimalButtons();
+  loadAnimal('gato');
+
+  // Auto-redibujar al cambiar inputs
+  document.addEventListener('input', e => {
+    if (e.target.closest('.tb')) {
+      clearTimeout(window._debounce);
+      window._debounce = setTimeout(() => { gen(); updateCode(); }, 400);
+    }
+  });
+
+  document.getElementById('partSel').addEventListener('change', e => loadPart(e.target.value));
+});
+</script>
+</body>
+</html>
